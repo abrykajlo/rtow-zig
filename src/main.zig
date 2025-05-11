@@ -1,5 +1,8 @@
 const std = @import("std");
 
+const c = @import("color.zig");
+const v = @import("vec3.zig");
+
 pub fn main() !void {
     const outw = std.io.getStdOut().writer();
 
@@ -14,15 +17,8 @@ pub fn main() !void {
     for (0..image_height) |j| {
         std.log.info("\rScanlines remaining: {}", .{image_height - j});
         for (0..image_width) |i| {
-            const r: f64 = @as(f64, @floatFromInt(i)) / (image_width - 1);
-            const g = @as(f64, @floatFromInt(j)) / (image_height - 1);
-            const b = 0.0;
-
-            const ir: c_int = @intFromFloat(255.999 * r);
-            const ig: c_int = @intFromFloat(255.999 * g);
-            const ib: c_int = @intFromFloat(255.999 * b);
-
-            try outw.print("{} {} {}\n", .{ ir, ig, ib });
+            const pixel_color: c.color = .{ @as(f64, @floatFromInt(i)) / (image_width - 1), @as(f64, @floatFromInt(j)) / (image_height - 1), 0.0 };
+            try c.writeColor(&outw, &pixel_color);
         }
     }
 }
