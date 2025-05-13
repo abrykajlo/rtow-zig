@@ -11,7 +11,7 @@ pub inline fn lengthSquared(v: *const Vec3) f64 {
 }
 
 pub inline fn dot(u: *const Vec3, v: *const Vec3) f64 {
-    return @reduce(.Add, u * v);
+    return @reduce(.Add, u.* * v.*);
 }
 
 pub inline fn cross(u: *const Vec3, v: *const Vec3) Vec3 {

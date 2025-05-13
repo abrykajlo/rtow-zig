@@ -1,13 +1,25 @@
 const std = @import("std");
 
-const c = @import("color.zig");
+const color = @import("color.zig");
 const r = @import("ray.zig");
 const v = @import("vec3.zig");
 
-fn rayColor(ray: *const r.Ray) c.Color {
+fn hitSphere(center: *const v.Point3, radius: f64, ray: *const r.Ray) bool {
+    const oc = center.* - ray.orig;
+    const a = v.dot(&ray.dir, &ray.dir);
+    const b = -2.0 * v.dot(&ray.dir, &oc);
+    const c = v.dot(&oc, &oc) - radius * radius;
+    const discriminant = b * b - 4 * a * c;
+    return discriminant >= 0;
+}
+
+fn rayColor(ray: *const r.Ray) color.Color {
+    if (hitSphere(&.{ 0, 0, -1 }, 0.5, ray))
+        return .{ 1, 0, 0 };
+
     const unit_direction = v.unitVector(&ray.dir);
     const a = 0.5 * (unit_direction[1] + 1.0);
-    return @as(v.Vec3, @splat(1.0 - a)) * c.Color{ 1.0, 1.0, 1.0 } + @as(v.Vec3, @splat(a)) * c.Color{ 0.5, 0.7, 1.0 };
+    return @as(v.Vec3, @splat(1.0 - a)) * color.Color{ 1.0, 1.0, 1.0 } + @as(v.Vec3, @splat(a)) * color.Color{ 0.5, 0.7, 1.0 };
 }
 
 pub fn main() !void {
@@ -52,7 +64,7 @@ pub fn main() !void {
             const ray: r.Ray = .{ .orig = camera_center, .dir = ray_direction };
 
             const pixel_color = rayColor(&ray);
-            try c.writeColor(&outw, &pixel_color);
+            try color.writeColor(&outw, &pixel_color);
         }
     }
 
