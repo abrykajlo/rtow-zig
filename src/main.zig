@@ -10,9 +10,9 @@ const Point3 = vecmath.Point3;
 const Sphere = @import("Sphere.zig");
 const Ray = @import("Ray.zig");
 
-fn rayColor(ray: *const Ray, world: *const Hittable) color.Color {
-    if (world.hit()) |rec| {
-        return 0.5 * (rec.normal + color.Color{ 1, 1, 1 });
+fn rayColor(ray: *const Ray, world: Hittable) color.Color {
+    if (world.hit(ray, 0, std.math.inf(f64))) |rec| {
+        return @as(Vec3, @splat(0.5)) * (rec.normal + color.Color{ 1, 1, 1 });
     }
 
     const unit_direction = vecmath.unitVector(&ray.dir);
@@ -21,8 +21,8 @@ fn rayColor(ray: *const Ray, world: *const Hittable) color.Color {
 }
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer gpa.deinit();
+    var gpa = std.heap.GeneralPurposeAllocator(.{ .verbose_log = true }){};
+    defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
     const outw = std.io.getStdOut().writer();
@@ -38,10 +38,10 @@ pub fn main() !void {
 
     // World
 
-    const world = HittableList.init(allocator);
+    var world = HittableList.init(allocator);
 
-    world.add(Sphere.init(&.{ 0, 0, -1 }, 0.5));
-    world.add(Sphere.init(.{ 0, -100.5, -1 }, 100));
+    try world.add(.{ .sphere = &Sphere.init(&.{ 0, 0, -1 }, 0.5) });
+    try world.add(.{ .sphere = &Sphere.init(&.{ 0, -100.5, -1 }, 100) });
 
     // Camera
 
@@ -72,7 +72,7 @@ pub fn main() !void {
             const ray_direction = pixel_center - camera_center;
             const ray: Ray = .{ .orig = camera_center, .dir = ray_direction };
 
-            const pixel_color = rayColor(&ray, &world);
+            const pixel_color = rayColor(&ray, .{ .hittable_list = &world });
             try color.write(&outw, &pixel_color);
         }
     }

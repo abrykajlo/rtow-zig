@@ -23,25 +23,23 @@ pub fn clear(self: *HittableList) void {
     self.objects.clearRetainingCapacity();
 }
 
-pub fn add(self: *const HittableList, hittable: Hittable) !void {
+pub fn add(self: *HittableList, hittable: Hittable) !void {
     const ptr = try self.objects.addOne();
     ptr.* = hittable;
 }
 
 pub fn hit(self: *const HittableList, ray: *const Ray, ray_tmin: f64, ray_tmax: f64) ?HitRecord {
-    const temp_rec: HitRecord = undefined;
+    var temp_rec: HitRecord = undefined;
     var hit_anything = false;
     var closest_so_far = ray_tmax;
 
-    for (self.objects) |object| {
-        switch (object) {
-            inline else => |o| if (o.hit(ray, ray_tmin, closest_so_far)) |rec| {
-                hit_anything = true;
-                closest_so_far = hit.t;
-                temp_rec = rec;
-            },
+    for (self.objects.items) |object| {
+        if (object.hit(ray, ray_tmin, closest_so_far)) |rec| {
+            hit_anything = true;
+            closest_so_far = rec.t;
+            temp_rec = rec;
         }
-
-        return if (hit_anything) temp_rec else .null;
     }
+
+    return if (hit_anything) temp_rec else null;
 }

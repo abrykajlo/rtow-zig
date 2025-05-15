@@ -20,6 +20,12 @@ pub const HitRecord = struct {
 };
 
 pub const Hittable = union(enum) {
-    hittable_list: *HittableList,
-    sphere: *Sphere,
+    hittable_list: *const HittableList,
+    sphere: *const Sphere,
+
+    pub fn hit(self: *const Hittable, ray: *const Ray, ray_tmin: f64, ray_tmax: f64) ?HitRecord {
+        switch (self.*) {
+            inline else => |h| return h.hit(ray, ray_tmin, ray_tmax),
+        }
+    }
 };

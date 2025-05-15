@@ -14,14 +14,14 @@ pub fn init(center: *const Point3, radius: f64) @This() {
 }
 
 pub fn hit(self: *const Sphere, ray: *const Ray, ray_tmin: f64, ray_tmax: f64) ?hittable.HitRecord {
-    const oc = self.center.* - ray.orig;
+    const oc = self.center - ray.orig;
     const a = vecmath.lengthSquared(&ray.dir);
     const h = vecmath.dot(&ray.dir, &oc);
     const c = vecmath.lengthSquared(&oc) - self.radius * self.radius;
     const discriminant = h * h - a * c;
 
     if (discriminant < 0) {
-        return .null;
+        return null;
     }
 
     const sqrtd = @sqrt(discriminant);
@@ -31,13 +31,13 @@ pub fn hit(self: *const Sphere, ray: *const Ray, ray_tmin: f64, ray_tmax: f64) ?
     if (root <= ray_tmin or ray_tmax <= root) {
         root = (h + sqrtd) / a;
         if (root <= ray_tmin or ray_tmax <= root)
-            return .null;
+            return null;
     }
 
     var rec: hittable.HitRecord = undefined;
     rec.t = root;
     rec.p = ray.at(rec.t);
-    const outward_normal = (.p - self.center) / @as(Point3, @splat(self.radius));
+    const outward_normal = (rec.p - self.center) / @as(Point3, @splat(self.radius));
     rec.setFaceNormal(ray, &outward_normal);
 
     return rec;
