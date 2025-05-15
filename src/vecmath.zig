@@ -1,6 +1,6 @@
 pub const Vec3 = @Vector(3, f64);
 
-pub const Point3 = Vec3;
+pub const Point3 = @Vector(3, f64);
 
 pub inline fn length(v: *const Vec3) f64 {
     return @sqrt(lengthSquared(v));

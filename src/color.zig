@@ -1,12 +1,11 @@
 const std = @import("std");
-const v = @import("vec3.zig");
 
-pub const Color = v.Vec3;
+pub const Color = @Vector(3, f64);
 
-pub fn writeColor(writer: *const std.fs.File.Writer, pixel_color: *const Color) !void {
-    const r = pixel_color[0];
-    const g = pixel_color[1];
-    const b = pixel_color[2];
+pub fn write(writer: *const std.fs.File.Writer, color: *const Color) !void {
+    const r = color[0];
+    const g = color[1];
+    const b = color[2];
 
     const rbyte: c_int = @intFromFloat(255.999 * r);
     const gbyte: c_int = @intFromFloat(255.999 * g);

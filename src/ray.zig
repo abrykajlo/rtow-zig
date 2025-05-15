@@ -1,10 +1,11 @@
-const v = @import("vec3.zig");
+const vecmath = @import("vecmath.zig");
 
-pub const Ray = struct {
-    orig: v.Point3,
-    dir: v.Vec3,
+const Point3 = vecmath.Point3;
+const Vec3 = vecmath.Vec3;
 
-    fn at(self: *const Ray, t: f64) v.Point3 {
-        return self.orig + t * self.dir;
-    }
-};
+orig: Point3,
+dir: Vec3,
+
+pub fn at(self: *const @This(), t: f64) Point3 {
+    return self.orig + @as(Vec3, @splat(t)) * self.dir;
+}
