@@ -1,9 +1,3 @@
-const vecmath = @import("vecmath.zig");
-const hittable = @import("hittable.zig");
-
-const Ray = @import("Ray.zig");
-const Point3 = vecmath.Point3;
-
 const Sphere = @This();
 
 center: Point3,
@@ -13,11 +7,11 @@ pub fn init(center: *const Point3, radius: f64) @This() {
     return .{ .center = center.*, .radius = @max(0, radius) };
 }
 
-pub fn hit(self: *const Sphere, ray: *const Ray, ray_tmin: f64, ray_tmax: f64) ?hittable.HitRecord {
+pub fn hit(self: *const Sphere, ray: *const Ray, ray_t: Interval) ?hittable.HitRecord {
     const oc = self.center - ray.orig;
-    const a = vecmath.lengthSquared(&ray.dir);
-    const h = vecmath.dot(&ray.dir, &oc);
-    const c = vecmath.lengthSquared(&oc) - self.radius * self.radius;
+    const a = rtw.vec3.lengthSquared(&ray.dir);
+    const h = rtw.vec3.dot(&ray.dir, &oc);
+    const c = rtw.vec3.lengthSquared(&oc) - self.radius * self.radius;
     const discriminant = h * h - a * c;
 
     if (discriminant < 0) {
@@ -28,9 +22,9 @@ pub fn hit(self: *const Sphere, ray: *const Ray, ray_tmin: f64, ray_tmax: f64) ?
 
     // Find the nearest root that lies in the acceptable range.
     var root = (h - sqrtd) / a;
-    if (root <= ray_tmin or ray_tmax <= root) {
+    if (!ray_t.surrounds(root)) {
         root = (h + sqrtd) / a;
-        if (root <= ray_tmin or ray_tmax <= root)
+        if (!ray_t.surrounds(root))
             return null;
     }
 
@@ -42,3 +36,10 @@ pub fn hit(self: *const Sphere, ray: *const Ray, ray_tmin: f64, ray_tmax: f64) ?
 
     return rec;
 }
+
+const hittable = @import("hittable.zig");
+
+const rtw = @import("rtweekend.zig");
+const Interval = rtw.Interval;
+const Point3 = rtw.vec3.Point3;
+const Ray = rtw.Ray;

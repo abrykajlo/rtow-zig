@@ -1,25 +1,3 @@
-const std = @import("std");
-
-const color = @import("color.zig");
-const vecmath = @import("vecmath.zig");
-
-const Hittable = @import("hittable.zig").Hittable;
-const HittableList = @import("HittableList.zig");
-const Vec3 = vecmath.Vec3;
-const Point3 = vecmath.Point3;
-const Sphere = @import("Sphere.zig");
-const Ray = @import("Ray.zig");
-
-fn rayColor(ray: *const Ray, world: Hittable) color.Color {
-    if (world.hit(ray, 0, std.math.inf(f64))) |rec| {
-        return @as(Vec3, @splat(0.5)) * (rec.normal + color.Color{ 1, 1, 1 });
-    }
-
-    const unit_direction = vecmath.unitVector(&ray.dir);
-    const a = 0.5 * (unit_direction[1] + 1.0);
-    return @as(Vec3, @splat(1.0 - a)) * color.Color{ 1.0, 1.0, 1.0 } + @as(Vec3, @splat(a)) * color.Color{ 0.5, 0.7, 1.0 };
-}
-
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{ .verbose_log = true }){};
     defer _ = gpa.deinit();
@@ -74,9 +52,31 @@ pub fn main() !void {
             const ray: Ray = .{ .orig = camera_center, .dir = ray_direction };
 
             const pixel_color = rayColor(&ray, .{ .hittable_list = &world });
-            try color.write(&outw, &pixel_color);
+            try rtw.color.write(&outw, &pixel_color);
         }
     }
 
     std.log.info("\rDone.   \n", .{});
 }
+
+fn rayColor(ray: *const Ray, world: Hittable) Color {
+    if (world.hit(ray, .{ .min = 0, .max = rtw.infinity })) |rec| {
+        return @as(Vec3, @splat(0.5)) * (rec.normal + Color{ 1, 1, 1 });
+    }
+
+    const unit_direction = rtw.vec3.unitVector(&ray.dir);
+    const a = 0.5 * (unit_direction[1] + 1.0);
+    return @as(Vec3, @splat(1.0 - a)) * Color{ 1.0, 1.0, 1.0 } + @as(Vec3, @splat(a)) * Color{ 0.5, 0.7, 1.0 };
+}
+
+const std = @import("std");
+
+const Hittable = @import("hittable.zig").Hittable;
+const HittableList = @import("HittableList.zig");
+const Sphere = @import("Sphere.zig");
+
+const rtw = @import("rtweekend.zig");
+const Vec3 = rtw.vec3.Vec3;
+const Point3 = rtw.vec3.Point3;
+const Ray = rtw.Ray;
+const Color = rtw.color.Color;

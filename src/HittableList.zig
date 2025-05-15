@@ -1,10 +1,3 @@
-const std = @import("std");
-
-const Allocator = std.mem.Allocator;
-const Hittable = @import("hittable.zig").Hittable;
-const HitRecord = @import("hittable.zig").HitRecord;
-const Ray = @import("Ray.zig");
-
 const HittableList = @This();
 
 objects: std.ArrayList(Hittable),
@@ -28,13 +21,13 @@ pub fn add(self: *HittableList, hittable: Hittable) !void {
     ptr.* = hittable;
 }
 
-pub fn hit(self: *const HittableList, ray: *const Ray, ray_tmin: f64, ray_tmax: f64) ?HitRecord {
+pub fn hit(self: *const HittableList, ray: *const Ray, ray_t: Interval) ?HitRecord {
     var temp_rec: HitRecord = undefined;
     var hit_anything = false;
-    var closest_so_far = ray_tmax;
+    var closest_so_far = ray_t.max;
 
     for (self.objects.items) |object| {
-        if (object.hit(ray, ray_tmin, closest_so_far)) |rec| {
+        if (object.hit(ray, .{ .min = ray_t.min, .max = closest_so_far })) |rec| {
             hit_anything = true;
             closest_so_far = rec.t;
             temp_rec = rec;
@@ -43,3 +36,13 @@ pub fn hit(self: *const HittableList, ray: *const Ray, ray_tmin: f64, ray_tmax: 
 
     return if (hit_anything) temp_rec else null;
 }
+
+const std = @import("std");
+const Allocator = std.mem.Allocator;
+
+const rtw = @import("rtweekend.zig");
+const Interval = rtw.Interval;
+const Ray = rtw.Ray;
+
+const Hittable = @import("hittable.zig").Hittable;
+const HitRecord = @import("hittable.zig").HitRecord;

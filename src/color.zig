@@ -1,5 +1,3 @@
-const std = @import("std");
-
 pub const Color = @Vector(3, f64);
 
 pub fn write(writer: *const std.fs.File.Writer, color: *const Color) !void {
@@ -13,3 +11,5 @@ pub fn write(writer: *const std.fs.File.Writer, color: *const Color) !void {
 
     try writer.print("{} {} {}\n", .{ rbyte, gbyte, bbyte });
 }
+
+const std = @import("std");
