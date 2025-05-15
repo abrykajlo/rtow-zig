@@ -39,6 +39,7 @@ pub fn main() !void {
     // World
 
     var world = HittableList.init(allocator);
+    defer world.deinit();
 
     try world.add(.{ .sphere = &Sphere.init(&.{ 0, 0, -1 }, 0.5) });
     try world.add(.{ .sphere = &Sphere.init(&.{ 0, -100.5, -1 }, 100) });
