@@ -7,14 +7,19 @@ center: Point3, // Camera center
 pixel00_loc: Point3, // Location of pixel 0, 0
 pixel_delta_u: Vec3, // Offset to pixel to the right
 pixel_delta_v: Vec3, // Offset to pixel below
+samples_per_pixel: usize, // Count of random samples for each pixel
+pixels_samples_scale: f64, // Color scale factor for a sum of pixel samples
 
-pub fn init(aspect_ratio: f64, image_width: usize) Camera {
+pub fn init(aspect_ratio: f64, image_width: usize, samples_per_pixel: usize) Camera {
     var cam: Camera = undefined;
     cam.aspect_ratio = aspect_ratio;
     cam.image_width = image_width;
+    cam.samples_per_pixel = samples_per_pixel;
 
     cam.image_height = @as(f64, @floatFromInt(image_width)) / aspect_ratio;
     cam.image_height = if (cam.image_height < 1) 1 else cam.image_height;
+
+    cam.pixels_samples_scale = 1.0 / @as(f64, @floatFromInt(cam.samples_per_pixel));
 
     cam.center = .{ 0, 0, 0 };
 
@@ -45,16 +50,30 @@ pub fn render(self: *Camera, world: Hittable) !void {
     for (0..self.image_height) |j| {
         std.log.info("\rScanlines remaining: {}", .{self.image_height - j});
         for (0..self.image_width) |i| {
-            const pixel_center = self.pixel00_loc + (@as(Vec3, @splat(@as(f64, @floatFromInt(i)))) * self.pixel_delta_u) + (@as(Vec3, @splat(@as(f64, @floatFromInt(j)))) * self.pixel_delta_v);
-            const ray_direction = pixel_center - self.center;
-            const ray: Ray = .{ .orig = self.center, .dir = ray_direction };
-
-            const pixel_color = rayColor(&ray, world);
+            var pixel_color: Color = .{ 0, 0, 0 };
+            for (0..self.samples_per_pixel) |_| {
+                const ray = self.getRay(i, j);
+                pixel_color += @as(Color, @splat(self.pixels_samples_scale)) * rayColor(&ray, world);
+            }
             try rtw.color.write(&outw, &pixel_color);
         }
     }
 
     std.log.info("\rDone.   \n", .{});
+}
+
+/// Construct a camera ray origination from the origin and directed at randomly sampled
+/// point around the pixel location i, j
+fn getRay(self: *const Camera, i: usize, j: usize) Ray {
+    const offset = sampleSquare();
+    const pixel_sample = self.pixel00_loc + @as(Vec3, @splat(@as(f64, @floatFromInt(i)) + offset[0])) * self.pixel_delta_u + @as(Vec3, @splat(@as(f64, @floatFromInt(j)) + offset[1])) * self.pixel_delta_v;
+
+    return .{ .orig = self.center, .dir = pixel_sample - self.center };
+}
+
+/// Returns the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.
+fn sampleSquare() @Vector(2, f64) {
+    return .{ rtw.randomDouble() - 0.5, rtw.randomDouble() - 0.5 };
 }
 
 fn rayColor(ray: *const Ray, world: Hittable) Color {
