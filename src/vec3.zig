@@ -10,6 +10,12 @@ pub inline fn lengthSquared(v: *const Vec3) f64 {
     return @reduce(.Add, v.* * v.*);
 }
 
+/// Return true if the vector is close to zero in all dimensions.
+pub fn nearZero(v: *const Vec3) bool {
+    const s = 1e-8;
+    return @abs(v[0]) < s and @abs(v[1]) < s and @abs(v[2]) < s;
+}
+
 pub fn random(args: anytype) Vec3 {
     return .{ rtw.randomDouble(args), rtw.randomDouble(args), rtw.randomDouble(args) };
 }
@@ -42,6 +48,10 @@ pub fn randomOnHemisphere(normal: *const Vec3) Vec3 {
     } else {
         return -on_unit_sphere;
     }
+}
+
+pub inline fn reflect(v: *const Vec3, n: *const Vec3) Vec3 {
+    return v.* - @as(Vec3, @splat(2.0 * dot(v, n))) * n.*;
 }
 
 const rtw = @import("rtweekend.zig");

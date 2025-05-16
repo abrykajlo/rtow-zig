@@ -12,6 +12,7 @@ pub const Hittable = union(enum) {
 pub const HitRecord = struct {
     p: Point3,
     normal: Vec3,
+    mat: Material,
     t: f64,
     front_face: bool = false,
 
@@ -29,3 +30,5 @@ const Ray = rtw.Ray;
 
 const HittableList = @import("HittableList.zig");
 const Sphere = @import("Sphere.zig");
+
+const Material = @import("material.zig").Material;

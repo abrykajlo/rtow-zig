@@ -83,8 +83,11 @@ fn rayColor(ray: *const Ray, depth: usize, world: Hittable) Color {
         return .{ 0, 0, 0 };
 
     if (world.hit(ray, .{ .min = 0.001, .max = rtw.infinity })) |rec| {
-        const direction = rec.normal + rtw.vec3.randomUnitVector();
-        return @as(Vec3, @splat(0.9)) * rayColor(&.{ .orig = rec.p, .dir = direction }, depth - 1, world);
+        var scattered: Ray = undefined;
+        var attenuation: Color = undefined;
+        if (rec.mat.scatter(ray, &rec, &attenuation, &scattered))
+            return attenuation * rayColor(&scattered, depth - 1, world);
+        return .{ 0, 0, 0 };
     }
 
     const unit_direction = rtw.vec3.unitVector(&ray.dir);

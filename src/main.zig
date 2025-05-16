@@ -6,8 +6,19 @@ pub fn main() !void {
     var world = HittableList.init(allocator);
     defer world.deinit();
 
-    try world.add(.{ .sphere = &.init(&.{ 0, 0, -1 }, 0.5) });
-    try world.add(.{ .sphere = &.init(&.{ 0, -100.5, -1 }, 100) });
+    const material_ground = try material.create(allocator, Lambertian, .{ .albedo = .{ 0.8, 0.8, 0.0 } });
+    defer material.destroy(allocator, Lambertian, material_ground);
+    const material_center = try material.create(allocator, Lambertian, .{ .albedo = .{ 0.1, 0.2, 0.5 } });
+    defer material.destroy(allocator, Lambertian, material_center);
+    const material_left = try material.create(allocator, Metal, .{ .albedo = .{ 0.8, 0.8, 0.8 }, .fuzz = 0.3 });
+    defer material.destroy(allocator, Metal, material_left);
+    const material_right = try material.create(allocator, Metal, .{ .albedo = .{ 0.8, 0.6, 0.2 }, .fuzz = 1.0 });
+    defer material.destroy(allocator, Metal, material_right);
+
+    try world.add(.{ .sphere = &.init(&.{ 0.0, -100.5, -1.0 }, 100.0, material_ground) });
+    try world.add(.{ .sphere = &.init(&.{ 0.0, 0.0, -1.2 }, 0.5, material_center) });
+    try world.add(.{ .sphere = &.init(&.{ -1.0, 0.0, -1.0 }, 0.5, material_left) });
+    try world.add(.{ .sphere = &.init(&.{ 1.0, 0.0, -1.0 }, 0.5, material_right) });
 
     var cam = comptime Camera.init(16.0 / 9.0, 400, 100, 50);
 
@@ -21,6 +32,11 @@ const Camera = @import("Camera.zig");
 const Hittable = @import("hittable.zig").Hittable;
 const HittableList = @import("HittableList.zig");
 const Sphere = @import("Sphere.zig");
+
+const material = @import("material.zig");
+const Material = material.Material;
+const Lambertian = material.Lambertian;
+const Metal = material.Metal;
 
 const rtw = @import("rtweekend.zig");
 const Vec3 = rtw.vec3.Vec3;
