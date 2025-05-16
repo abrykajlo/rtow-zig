@@ -9,12 +9,14 @@ pixel_delta_u: Vec3, // Offset to pixel to the right
 pixel_delta_v: Vec3, // Offset to pixel below
 samples_per_pixel: usize, // Count of random samples for each pixel
 pixels_samples_scale: f64, // Color scale factor for a sum of pixel samples
+max_depth: usize, // Maximum number of ray bounces into scene
 
-pub fn init(aspect_ratio: f64, image_width: usize, samples_per_pixel: usize) Camera {
+pub fn init(aspect_ratio: f64, image_width: usize, samples_per_pixel: usize, max_depth: usize) Camera {
     var cam: Camera = undefined;
     cam.aspect_ratio = aspect_ratio;
     cam.image_width = image_width;
     cam.samples_per_pixel = samples_per_pixel;
+    cam.max_depth = max_depth;
 
     cam.image_height = @as(f64, @floatFromInt(image_width)) / aspect_ratio;
     cam.image_height = if (cam.image_height < 1) 1 else cam.image_height;
@@ -53,7 +55,7 @@ pub fn render(self: *Camera, world: Hittable) !void {
             var pixel_color: Color = .{ 0, 0, 0 };
             for (0..self.samples_per_pixel) |_| {
                 const ray = self.getRay(i, j);
-                pixel_color += @as(Color, @splat(self.pixels_samples_scale)) * rayColor(&ray, world);
+                pixel_color += @as(Color, @splat(self.pixels_samples_scale)) * rayColor(&ray, self.max_depth, world);
             }
             try rtw.color.write(&outw, &pixel_color);
         }
@@ -73,12 +75,16 @@ fn getRay(self: *const Camera, i: usize, j: usize) Ray {
 
 /// Returns the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.
 fn sampleSquare() @Vector(2, f64) {
-    return .{ rtw.randomDouble() - 0.5, rtw.randomDouble() - 0.5 };
+    return .{ rtw.randomDouble(void{}) - 0.5, rtw.randomDouble(void{}) - 0.5 };
 }
 
-fn rayColor(ray: *const Ray, world: Hittable) Color {
-    if (world.hit(ray, .{ .min = 0, .max = rtw.infinity })) |rec| {
-        return @as(Vec3, @splat(0.5)) * (rec.normal + Color{ 1, 1, 1 });
+fn rayColor(ray: *const Ray, depth: usize, world: Hittable) Color {
+    if (depth <= 0)
+        return .{ 0, 0, 0 };
+
+    if (world.hit(ray, .{ .min = 0.001, .max = rtw.infinity })) |rec| {
+        const direction = rec.normal + rtw.vec3.randomUnitVector();
+        return @as(Vec3, @splat(0.9)) * rayColor(&.{ .orig = rec.p, .dir = direction }, depth - 1, world);
     }
 
     const unit_direction = rtw.vec3.unitVector(&ray.dir);

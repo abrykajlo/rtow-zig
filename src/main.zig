@@ -9,7 +9,7 @@ pub fn main() !void {
     try world.add(.{ .sphere = &.init(&.{ 0, 0, -1 }, 0.5) });
     try world.add(.{ .sphere = &.init(&.{ 0, -100.5, -1 }, 100) });
 
-    var cam = comptime Camera.init(16.0 / 9.0, 400, 100);
+    var cam = comptime Camera.init(16.0 / 9.0, 400, 100, 50);
 
     try cam.render(.{ .hittable_list = &world });
 }
