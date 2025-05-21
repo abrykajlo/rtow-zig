@@ -4,23 +4,17 @@ pub const Material = struct {
 
     const VTable = struct {
         scatter: *const fn (*const anyopaque, r_in: *const Ray, rec: *const HitRecord, attenuation: *Color, scattered: *Ray) bool,
+        destroy: *const fn (*const anyopaque, allocator: std.mem.Allocator) void,
     };
 
     pub inline fn scatter(self: *const Material, r_in: *const Ray, rec: *const HitRecord, attenuation: *Color, scattered: *Ray) bool {
         return self.vtable.scatter(self.ptr, r_in, rec, attenuation, scattered);
     }
+
+    pub inline fn destroy(self: *const Material, allocator: std.mem.Allocator) void {
+        self.vtable.destroy(self.ptr, allocator);
+    }
 };
-
-pub fn create(allocator: std.mem.Allocator, T: type, props: T) !Material {
-    const ptr = try allocator.create(T);
-    ptr.* = props;
-    return .{ .ptr = ptr, .vtable = &T.vtable };
-}
-
-pub fn destroy(allocator: std.mem.Allocator, T: type, material: Material) void {
-    const typed_ptr: *T = @ptrCast(@alignCast(material.ptr));
-    allocator.destroy(typed_ptr);
-}
 
 pub const Lambertian = struct {
     albedo: Color,
@@ -38,7 +32,15 @@ pub const Lambertian = struct {
         return true;
     }
 
-    pub const vtable: Material.VTable = .{ .scatter = scatter };
+    pub fn destroy(context: *const anyopaque, allocator: std.mem.Allocator) void {
+        const self: *const Lambertian = @ptrCast(@alignCast(context));
+        allocator.destroy(self);
+    }
+
+    pub const vtable: Material.VTable = .{
+        .scatter = scatter,
+        .destroy = destroy,
+    };
 };
 
 pub const Metal = struct {
@@ -54,7 +56,15 @@ pub const Metal = struct {
         return rtw.vec3.dot(&scattered.dir, &rec.normal) > 0;
     }
 
-    pub const vtable: Material.VTable = .{ .scatter = scatter };
+    pub fn destroy(context: *const anyopaque, allocator: std.mem.Allocator) void {
+        const self: *const Metal = @ptrCast(@alignCast(context));
+        allocator.destroy(self);
+    }
+
+    pub const vtable: Material.VTable = .{
+        .scatter = scatter,
+        .destroy = destroy,
+    };
 };
 
 pub const Dielectric = struct {
@@ -90,7 +100,45 @@ pub const Dielectric = struct {
         return r0 + (1.0 - r0) * std.math.pow(f64, 1.0 - cosine, 5.0);
     }
 
-    pub const vtable: Material.VTable = .{ .scatter = scatter };
+    pub fn destroy(context: *const anyopaque, allocator: std.mem.Allocator) void {
+        const self: *const Dielectric = @ptrCast(@alignCast(context));
+        allocator.destroy(self);
+    }
+
+    pub const vtable: Material.VTable = .{
+        .scatter = scatter,
+        .destroy = destroy,
+    };
+};
+
+pub const MaterialManager = struct {
+    allocator: std.mem.Allocator,
+    materials: std.ArrayList(Material),
+
+    pub fn init(allocator: std.mem.Allocator) MaterialManager {
+        return .{
+            .allocator = allocator,
+            .materials = .init(allocator),
+        };
+    }
+
+    pub fn deinit(self: *const MaterialManager) void {
+        for (self.materials.items) |material| {
+            material.destroy(self.allocator);
+        }
+        self.materials.deinit();
+    }
+
+    pub fn create(self: *MaterialManager, val: anytype) !Material {
+        const MaterialT = @TypeOf(val);
+
+        const ptr = try self.allocator.create(MaterialT);
+        ptr.* = val;
+
+        const material = try self.materials.addOne();
+        material.* = .{ .ptr = ptr, .vtable = &MaterialT.vtable };
+        return material.*;
+    }
 };
 
 const std = @import("std");
