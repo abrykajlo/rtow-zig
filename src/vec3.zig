@@ -32,6 +32,14 @@ pub inline fn unitVector(v: *const Vec3) Vec3 {
     return v.* / toVec3(length(v));
 }
 
+pub inline fn randomInUnitDisk() Vec3 {
+    while (true) {
+        const p: Vec3 = .{ rtw.randomDouble(.{ .min = -1, .max = 1 }), rtw.randomDouble(.{ .min = -1, .max = 1 }), 0 };
+        if (rtw.vec3.lengthSquared(&p) < 1)
+            return p;
+    }
+}
+
 pub fn randomUnitVector() Vec3 {
     while (true) {
         const p = random(.{ .min = -1.0, .max = 1.0 });

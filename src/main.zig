@@ -36,6 +36,8 @@ pub fn main() !void {
         .lookfrom = .{ -2, 2, 1 },
         .lookat = .{ 0, 0, -1 },
         .vup = .{ 0, 1, 0 },
+        .defocus_angle = 10,
+        .focus_dist = 3.4,
     });
 
     try cam.render(.{ .hittable_list = &world });
