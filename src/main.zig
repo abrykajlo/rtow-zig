@@ -8,16 +8,23 @@ pub fn main() !void {
 
     const material_ground = try material.create(allocator, Lambertian, .{ .albedo = .{ 0.8, 0.8, 0.0 } });
     defer material.destroy(allocator, Lambertian, material_ground);
+
     const material_center = try material.create(allocator, Lambertian, .{ .albedo = .{ 0.1, 0.2, 0.5 } });
     defer material.destroy(allocator, Lambertian, material_center);
-    const material_left = try material.create(allocator, Metal, .{ .albedo = .{ 0.8, 0.8, 0.8 }, .fuzz = 0.3 });
-    defer material.destroy(allocator, Metal, material_left);
+
+    const material_left = try material.create(allocator, Dielectric, .{ .refraction_index = 1.50 });
+    defer material.destroy(allocator, Dielectric, material_left);
+
+    const material_bubble = try material.create(allocator, Dielectric, .{ .refraction_index = 1.00 / 1.50 });
+    defer material.destroy(allocator, Dielectric, material_bubble);
+
     const material_right = try material.create(allocator, Metal, .{ .albedo = .{ 0.8, 0.6, 0.2 }, .fuzz = 1.0 });
     defer material.destroy(allocator, Metal, material_right);
 
     try world.add(.{ .sphere = &.init(&.{ 0.0, -100.5, -1.0 }, 100.0, material_ground) });
     try world.add(.{ .sphere = &.init(&.{ 0.0, 0.0, -1.2 }, 0.5, material_center) });
     try world.add(.{ .sphere = &.init(&.{ -1.0, 0.0, -1.0 }, 0.5, material_left) });
+    try world.add(.{ .sphere = &.init(&.{ -1.0, 0.0, -1.0 }, 0.4, material_bubble) });
     try world.add(.{ .sphere = &.init(&.{ 1.0, 0.0, -1.0 }, 0.5, material_right) });
 
     var cam = comptime Camera.init(16.0 / 9.0, 400, 100, 50);
@@ -37,6 +44,7 @@ const material = @import("material.zig");
 const Material = material.Material;
 const Lambertian = material.Lambertian;
 const Metal = material.Metal;
+const Dielectric = material.Dielectric;
 
 const rtw = @import("rtweekend.zig");
 const Vec3 = rtw.vec3.Vec3;

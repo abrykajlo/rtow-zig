@@ -32,7 +32,7 @@ pub fn hit(self: *const Sphere, ray: *const Ray, ray_t: Interval) ?hittable.HitR
     var rec: hittable.HitRecord = undefined;
     rec.t = root;
     rec.p = ray.at(rec.t);
-    const outward_normal = (rec.p - self.center) / @as(Point3, @splat(self.radius));
+    const outward_normal = (rec.p - self.center) / toVec3(self.radius);
     rec.setFaceNormal(ray, &outward_normal);
     rec.mat = self.mat;
 
@@ -45,5 +45,6 @@ const rtw = @import("rtweekend.zig");
 const Interval = rtw.Interval;
 const Point3 = rtw.vec3.Point3;
 const Ray = rtw.Ray;
+const toVec3 = rtw.vec3.toVec3;
 
 const Material = @import("material.zig").Material;

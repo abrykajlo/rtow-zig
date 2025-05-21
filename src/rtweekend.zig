@@ -21,6 +21,10 @@ pub inline fn randomDouble(args: anytype) f64 {
     }
 }
 
+pub inline fn toFloat(v: anytype) f64 {
+    return @floatFromInt(v);
+}
+
 // Common Imports
 
 pub const color = @import("color.zig");

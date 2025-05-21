@@ -29,7 +29,7 @@ pub inline fn cross(u: *const Vec3, v: *const Vec3) Vec3 {
 }
 
 pub inline fn unitVector(v: *const Vec3) Vec3 {
-    return v.* / @as(Vec3, @splat(length(v)));
+    return v.* / toVec3(length(v));
 }
 
 pub fn randomUnitVector() Vec3 {
@@ -37,7 +37,7 @@ pub fn randomUnitVector() Vec3 {
         const p = random(.{ .min = -1.0, .max = 1.0 });
         const lensq = lengthSquared(&p);
         if (1e-160 < lensq and lensq <= 1)
-            return p / @as(Vec3, @splat(@sqrt(lensq)));
+            return p / toVec3(@sqrt(lensq));
     }
 }
 
@@ -51,7 +51,22 @@ pub fn randomOnHemisphere(normal: *const Vec3) Vec3 {
 }
 
 pub inline fn reflect(v: *const Vec3, n: *const Vec3) Vec3 {
-    return v.* - @as(Vec3, @splat(2.0 * dot(v, n))) * n.*;
+    return v.* - toVec3(2.0 * dot(v, n)) * n.*;
+}
+
+pub inline fn refract(uv: *const Vec3, n: *const Vec3, etai_over_etat: f64) Vec3 {
+    const cos_theta = @min(dot(&-uv.*, n), 1.0);
+    const r_out_perp = toVec3(etai_over_etat) * (uv.* + toVec3(cos_theta) * n.*);
+    const r_out_parallel = toVec3(-@sqrt(@abs(1.0 - lengthSquared(&r_out_perp)))) * n.*;
+    return r_out_perp + r_out_parallel;
+}
+
+pub inline fn toVec3(s: anytype) Vec3 {
+    switch (@typeInfo(@TypeOf(s))) {
+        .int, .comptime_int => return @splat(@floatFromInt(s)),
+        .float, .comptime_float => return @splat(s),
+        else => @compileError("Type cannot be splatted"),
+    }
 }
 
 const rtw = @import("rtweekend.zig");

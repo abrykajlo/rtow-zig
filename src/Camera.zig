@@ -18,29 +18,29 @@ pub fn init(aspect_ratio: f64, image_width: usize, samples_per_pixel: usize, max
     cam.samples_per_pixel = samples_per_pixel;
     cam.max_depth = max_depth;
 
-    cam.image_height = @as(f64, @floatFromInt(image_width)) / aspect_ratio;
+    cam.image_height = rtw.toFloat(image_width) / aspect_ratio;
     cam.image_height = if (cam.image_height < 1) 1 else cam.image_height;
 
-    cam.pixels_samples_scale = 1.0 / @as(f64, @floatFromInt(cam.samples_per_pixel));
+    cam.pixels_samples_scale = 1.0 / toFloat(cam.samples_per_pixel);
 
     cam.center = .{ 0, 0, 0 };
 
     // Determine viewport dimensions.
     const focal_length = 1.0;
     const viewport_height = 2.0;
-    const viewport_width = viewport_height * @as(f64, @floatFromInt(cam.image_width)) / @as(f64, @floatFromInt(cam.image_height));
+    const viewport_width = viewport_height * toFloat(cam.image_width) / toFloat(cam.image_height);
 
     // Calculate the vectors across the horizontal and down the vertical viewport edges.
     const viewport_u: Vec3 = .{ viewport_width, 0, 0 };
     const viewport_v: Vec3 = .{ 0, -viewport_height, 0 };
 
     // Calculate the horizontal and vertical delta vectors from pixel to pixel.
-    cam.pixel_delta_u = viewport_u / @as(Vec3, @splat(@floatFromInt(cam.image_width)));
-    cam.pixel_delta_v = viewport_v / @as(Vec3, @splat(@floatFromInt(cam.image_height)));
+    cam.pixel_delta_u = viewport_u / toVec3(cam.image_width);
+    cam.pixel_delta_v = viewport_v / toVec3(cam.image_height);
 
     // Calculate the location of the upper left pixel.
-    const viewport_upper_left = cam.center - Vec3{ 0, 0, focal_length } - viewport_u / @as(Vec3, @splat(2.0)) - viewport_v / @as(Vec3, @splat(2.0));
-    cam.pixel00_loc = viewport_upper_left + @as(Vec3, @splat(0.5)) * (cam.pixel_delta_u + cam.pixel_delta_v);
+    const viewport_upper_left = cam.center - Vec3{ 0, 0, focal_length } - viewport_u / toVec3(2.0) - viewport_v / toVec3(2.0);
+    cam.pixel00_loc = viewport_upper_left + toVec3(0.5) * (cam.pixel_delta_u + cam.pixel_delta_v);
 
     return cam;
 }
@@ -55,7 +55,7 @@ pub fn render(self: *Camera, world: Hittable) !void {
             var pixel_color: Color = .{ 0, 0, 0 };
             for (0..self.samples_per_pixel) |_| {
                 const ray = self.getRay(i, j);
-                pixel_color += @as(Color, @splat(self.pixels_samples_scale)) * rayColor(&ray, self.max_depth, world);
+                pixel_color += toVec3(self.pixels_samples_scale) * rayColor(&ray, self.max_depth, world);
             }
             try rtw.color.write(&outw, &pixel_color);
         }
@@ -68,7 +68,7 @@ pub fn render(self: *Camera, world: Hittable) !void {
 /// point around the pixel location i, j
 fn getRay(self: *const Camera, i: usize, j: usize) Ray {
     const offset = sampleSquare();
-    const pixel_sample = self.pixel00_loc + @as(Vec3, @splat(@as(f64, @floatFromInt(i)) + offset[0])) * self.pixel_delta_u + @as(Vec3, @splat(@as(f64, @floatFromInt(j)) + offset[1])) * self.pixel_delta_v;
+    const pixel_sample = self.pixel00_loc + toVec3(toFloat(i) + offset[0]) * self.pixel_delta_u + toVec3(toFloat(j) + offset[1]) * self.pixel_delta_v;
 
     return .{ .orig = self.center, .dir = pixel_sample - self.center };
 }
@@ -92,7 +92,7 @@ fn rayColor(ray: *const Ray, depth: usize, world: Hittable) Color {
 
     const unit_direction = rtw.vec3.unitVector(&ray.dir);
     const a = 0.5 * (unit_direction[1] + 1.0);
-    return @as(Vec3, @splat(1.0 - a)) * Color{ 1.0, 1.0, 1.0 } + @as(Vec3, @splat(a)) * Color{ 0.5, 0.7, 1.0 };
+    return toVec3(1.0 - a) * Color{ 1.0, 1.0, 1.0 } + toVec3(a) * Color{ 0.5, 0.7, 1.0 };
 }
 
 const std = @import("std");
@@ -102,5 +102,7 @@ const Hittable = @import("hittable.zig").Hittable;
 const rtw = @import("rtweekend.zig");
 const Color = rtw.color.Color;
 const Ray = rtw.Ray;
+const toFloat = rtw.toFloat;
 const Point3 = rtw.vec3.Point3;
 const Vec3 = rtw.vec3.Vec3;
+const toVec3 = rtw.vec3.toVec3;
