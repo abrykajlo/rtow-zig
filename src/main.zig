@@ -6,38 +6,58 @@ pub fn main() !void {
     var world = HittableList.init(allocator);
     defer world.deinit();
 
-    const material_ground = try material.create(allocator, Lambertian, .{ .albedo = .{ 0.8, 0.8, 0.0 } });
-    defer material.destroy(allocator, Lambertian, material_ground);
+    const ground_material = try material.create(allocator, Lambertian, .{ .albedo = .{ 0.5, 0.5, 0.5 } });
+    defer material.destroy(allocator, Lambertian, ground_material);
+    try world.add(.{ .sphere = &.init(&.{ 0, -1000, 0 }, 1000, ground_material) });
 
-    const material_center = try material.create(allocator, Lambertian, .{ .albedo = .{ 0.1, 0.2, 0.5 } });
-    defer material.destroy(allocator, Lambertian, material_center);
+    var a: isize = -11;
+    while (a <= 11) : (a += 1) {
+        var b: isize = -11;
+        while (b <= 11) : (b += 1) {
+            const choose_mat = rtw.randomDouble(void{});
+            const center: Point3 = .{ toFloat(a) + 0.9 * rtw.randomDouble(void{}), 0.2, toFloat(b) + 0.9 * rtw.randomDouble(void{}) };
 
-    const material_left = try material.create(allocator, Dielectric, .{ .refraction_index = 1.50 });
-    defer material.destroy(allocator, Dielectric, material_left);
+            if (rtw.vec3.length(&(center - Point3{ 4, 0.2, 0 })) > 0.9) {
+                if (choose_mat < 0.8) {
+                    // diffuse
+                    const albedo = rtw.vec3.random(void{}) * rtw.vec3.random(void{});
+                    const sphere_material = try material.create(allocator, Lambertian, .{ .albedo = albedo });
+                    try world.add(.{ .sphere = &.init(&center, 0.2, sphere_material) });
+                } else if (choose_mat < 0.95) {
+                    // metal
+                    const albedo = rtw.vec3.random(.{ .min = 0.5, .max = 1 });
+                    const fuzz = rtw.randomDouble(.{ .min = 0, .max = 0.5 });
+                    const sphere_material = try material.create(allocator, Metal, .{ .albedo = albedo, .fuzz = fuzz });
+                    try world.add(.{ .sphere = &.init(&center, 0.2, sphere_material) });
+                } else {
+                    // glass
+                    const sphere_material = try material.create(allocator, Dielectric, .{ .refraction_index = 1.5 });
+                    try world.add(.{ .sphere = &.init(&center, 0.2, sphere_material) });
+                }
+            }
+        }
+    }
 
-    const material_bubble = try material.create(allocator, Dielectric, .{ .refraction_index = 1.00 / 1.50 });
-    defer material.destroy(allocator, Dielectric, material_bubble);
+    const material1 = try material.create(allocator, Dielectric, .{ .refraction_index = 1.5 });
+    try world.add(.{ .sphere = &.init(&.{ 0, 1, 0 }, 1.0, material1) });
 
-    const material_right = try material.create(allocator, Metal, .{ .albedo = .{ 0.8, 0.6, 0.2 }, .fuzz = 1.0 });
-    defer material.destroy(allocator, Metal, material_right);
+    const material2 = try material.create(allocator, Lambertian, .{ .albedo = .{ 0.4, 0.2, 0.1 } });
+    try world.add(.{ .sphere = &.init(&.{ -4, 1, 0 }, 1.0, material2) });
 
-    try world.add(.{ .sphere = &.init(&.{ 0.0, -100.5, -1.0 }, 100.0, material_ground) });
-    try world.add(.{ .sphere = &.init(&.{ 0.0, 0.0, -1.2 }, 0.5, material_center) });
-    try world.add(.{ .sphere = &.init(&.{ -1.0, 0.0, -1.0 }, 0.5, material_left) });
-    try world.add(.{ .sphere = &.init(&.{ -1.0, 0.0, -1.0 }, 0.4, material_bubble) });
-    try world.add(.{ .sphere = &.init(&.{ 1.0, 0.0, -1.0 }, 0.5, material_right) });
+    const material3 = try material.create(allocator, Metal, .{ .albedo = .{ 0.7, 0.6, 0.5 }, .fuzz = 0.0 });
+    try world.add(.{ .sphere = &.init(&.{ 4, 1, 0 }, 1.0, material3) });
 
     var cam = comptime Camera.init(.{
         .aspect_ratio = 16.0 / 9.0,
-        .image_width = 400,
-        .samples_per_pixel = 100,
+        .image_width = 1200,
+        .samples_per_pixel = 500,
         .max_depth = 50,
         .vfov = 20,
-        .lookfrom = .{ -2, 2, 1 },
-        .lookat = .{ 0, 0, -1 },
+        .lookfrom = .{ 13, 2, 3 },
+        .lookat = .{ 0, 0, 0 },
         .vup = .{ 0, 1, 0 },
-        .defocus_angle = 10,
-        .focus_dist = 3.4,
+        .defocus_angle = 0.6,
+        .focus_dist = 10.0,
     });
 
     try cam.render(.{ .hittable_list = &world });
@@ -62,3 +82,4 @@ const Vec3 = rtw.vec3.Vec3;
 const Point3 = rtw.vec3.Point3;
 const Ray = rtw.Ray;
 const Color = rtw.color.Color;
+const toFloat = rtw.toFloat;
