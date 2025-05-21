@@ -11,35 +11,56 @@ samples_per_pixel: usize, // Count of random samples for each pixel
 pixels_samples_scale: f64, // Color scale factor for a sum of pixel samples
 max_depth: usize, // Maximum number of ray bounces into scene
 
-pub fn init(aspect_ratio: f64, image_width: usize, samples_per_pixel: usize, max_depth: usize) Camera {
-    var cam: Camera = undefined;
-    cam.aspect_ratio = aspect_ratio;
-    cam.image_width = image_width;
-    cam.samples_per_pixel = samples_per_pixel;
-    cam.max_depth = max_depth;
+vfov: f64, // Vertical view angle (field of view)
+lookfrom: Point3, // Point camera is looking from
+lookat: Point3, // Point camera is looking at
+vup: Vec3, // Camera-relative "up" direction
 
-    cam.image_height = rtw.toFloat(image_width) / aspect_ratio;
+// Camera frame basis vectors
+u: Vec3,
+v: Vec3,
+w: Vec3,
+
+pub fn init(in: Init) Camera {
+    var cam: Camera = undefined;
+    cam.aspect_ratio = in.aspect_ratio;
+    cam.image_width = in.image_width;
+    cam.samples_per_pixel = in.samples_per_pixel;
+    cam.max_depth = in.max_depth;
+    cam.vfov = in.vfov;
+    cam.lookfrom = in.lookfrom;
+    cam.lookat = in.lookat;
+    cam.vup = in.vup;
+
+    cam.image_height = rtw.toFloat(in.image_width) / in.aspect_ratio;
     cam.image_height = if (cam.image_height < 1) 1 else cam.image_height;
 
     cam.pixels_samples_scale = 1.0 / toFloat(cam.samples_per_pixel);
 
-    cam.center = .{ 0, 0, 0 };
+    cam.center = cam.lookfrom;
 
     // Determine viewport dimensions.
-    const focal_length = 1.0;
-    const viewport_height = 2.0;
+    const focal_length = rtw.vec3.length(&(cam.lookfrom - cam.lookat));
+    const theta = rtw.degreesToRadians(in.vfov);
+    const h = @tan(theta / 2.0);
+    const viewport_height = 2.0 * h * focal_length;
     const viewport_width = viewport_height * toFloat(cam.image_width) / toFloat(cam.image_height);
 
+    // Calculate the u,v,w unit basis vectors for the camera coordinate frame.
+    cam.w = rtw.vec3.unitVector(&(in.lookfrom - in.lookat));
+    cam.u = rtw.vec3.unitVector(&rtw.vec3.cross(&cam.vup, &cam.w));
+    cam.v = rtw.vec3.cross(&cam.w, &cam.u);
+
     // Calculate the vectors across the horizontal and down the vertical viewport edges.
-    const viewport_u: Vec3 = .{ viewport_width, 0, 0 };
-    const viewport_v: Vec3 = .{ 0, -viewport_height, 0 };
+    const viewport_u: Vec3 = toVec3(viewport_width) * cam.u; // Vector across viewport horizontal edge
+    const viewport_v: Vec3 = toVec3(viewport_height) * -cam.v; // Vector down viewport vertical edge
 
     // Calculate the horizontal and vertical delta vectors from pixel to pixel.
     cam.pixel_delta_u = viewport_u / toVec3(cam.image_width);
     cam.pixel_delta_v = viewport_v / toVec3(cam.image_height);
 
     // Calculate the location of the upper left pixel.
-    const viewport_upper_left = cam.center - Vec3{ 0, 0, focal_length } - viewport_u / toVec3(2.0) - viewport_v / toVec3(2.0);
+    const viewport_upper_left = cam.center - toVec3(focal_length) * cam.w - viewport_u / toVec3(2.0) - viewport_v / toVec3(2.0);
     cam.pixel00_loc = viewport_upper_left + toVec3(0.5) * (cam.pixel_delta_u + cam.pixel_delta_v);
 
     return cam;
@@ -94,6 +115,17 @@ fn rayColor(ray: *const Ray, depth: usize, world: Hittable) Color {
     const a = 0.5 * (unit_direction[1] + 1.0);
     return toVec3(1.0 - a) * Color{ 1.0, 1.0, 1.0 } + toVec3(a) * Color{ 0.5, 0.7, 1.0 };
 }
+
+const Init = struct {
+    aspect_ratio: f64 = 1.0,
+    image_width: usize = 100,
+    samples_per_pixel: usize = 10,
+    max_depth: usize = 10,
+    vfov: f64 = 90,
+    lookfrom: Point3 = .{ 0, 0, 0 },
+    lookat: Point3 = .{ 0, 0, -1 },
+    vup: Vec3 = .{ 0, 1, 0 },
+};
 
 const std = @import("std");
 

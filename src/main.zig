@@ -27,7 +27,16 @@ pub fn main() !void {
     try world.add(.{ .sphere = &.init(&.{ -1.0, 0.0, -1.0 }, 0.4, material_bubble) });
     try world.add(.{ .sphere = &.init(&.{ 1.0, 0.0, -1.0 }, 0.5, material_right) });
 
-    var cam = comptime Camera.init(16.0 / 9.0, 400, 100, 50);
+    var cam = comptime Camera.init(.{
+        .aspect_ratio = 16.0 / 9.0,
+        .image_width = 400,
+        .samples_per_pixel = 100,
+        .max_depth = 50,
+        .vfov = 20,
+        .lookfrom = .{ -2, 2, 1 },
+        .lookat = .{ 0, 0, -1 },
+        .vup = .{ 0, 1, 0 },
+    });
 
     try cam.render(.{ .hittable_list = &world });
 }
