@@ -1,14 +1,22 @@
 const HittableList = @This();
 
+allocator: Allocator,
 objects: std.ArrayList(Hittable),
 
 pub fn init(allocator: Allocator) HittableList {
     return .{
+        .allocator = allocator,
         .objects = std.ArrayList(Hittable).init(allocator),
     };
 }
 
 pub fn deinit(self: *HittableList) void {
+    for (self.objects.items) |object| {
+        switch (object) {
+            .sphere => |s| self.allocator.destroy(s),
+            .hittable_list => unreachable,
+        }
+    }
     self.objects.deinit();
 }
 
@@ -16,9 +24,21 @@ pub fn clear(self: *HittableList) void {
     self.objects.clearRetainingCapacity();
 }
 
-pub fn add(self: *HittableList, hittable: Hittable) !void {
+pub fn add(self: *HittableList, hittable: anytype) !void {
     const ptr = try self.objects.addOne();
-    ptr.* = hittable;
+    const HittableT = @TypeOf(hittable);
+    switch (@typeInfo(HittableT)) {
+        .pointer => |p| {
+            inline for (std.meta.fields(Hittable)) |field| {
+                if (field.type == HittableT) {
+                    const hittable_ptr = try self.allocator.create(p.child);
+                    hittable_ptr.* = hittable.*;
+                    ptr.* = @unionInit(Hittable, field.name, hittable_ptr);
+                }
+            }
+        },
+        else => @compileError("invalid type"),
+    }
 }
 
 pub fn hit(self: *const HittableList, ray: *const Ray, ray_t: Interval) ?HitRecord {
@@ -46,3 +66,4 @@ const Ray = rtw.Ray;
 
 const Hittable = @import("hittable.zig").Hittable;
 const HitRecord = @import("hittable.zig").HitRecord;
+const Sphere = @import("Sphere.zig");

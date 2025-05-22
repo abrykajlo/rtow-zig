@@ -10,7 +10,7 @@ pub fn main() !void {
     defer mat_manager.deinit();
 
     const ground_material = try mat_manager.create(Lambertian{ .albedo = .{ 0.5, 0.5, 0.5 } });
-    try world.add(.{ .sphere = &.init(&.{ 0, -1000, 0 }, 1000, ground_material) });
+    try world.add(&Sphere.init(&.{ 0, -1000, 0 }, 1000, ground_material));
 
     var a: isize = -11;
     while (a <= 11) : (a += 1) {
@@ -24,30 +24,30 @@ pub fn main() !void {
                     // diffuse
                     const albedo = rtw.vec3.random(void{}) * rtw.vec3.random(void{});
                     const sphere_material = try mat_manager.create(Lambertian{ .albedo = albedo });
-                    try world.add(.{ .sphere = &.init(&center, 0.2, sphere_material) });
+                    try world.add(&Sphere.init(&center, 0.2, sphere_material));
                 } else if (choose_mat < 0.95) {
                     // metal
                     const albedo = rtw.vec3.random(.{ .min = 0.5, .max = 1 });
                     const fuzz = rtw.randomDouble(.{ .min = 0, .max = 0.5 });
                     const sphere_material = try mat_manager.create(Metal{ .albedo = albedo, .fuzz = fuzz });
-                    try world.add(.{ .sphere = &.init(&center, 0.2, sphere_material) });
+                    try world.add(&Sphere.init(&center, 0.2, sphere_material));
                 } else {
                     // glass
                     const sphere_material = try mat_manager.create(Dielectric{ .refraction_index = 1.5 });
-                    try world.add(.{ .sphere = &.init(&center, 0.2, sphere_material) });
+                    try world.add(&Sphere.init(&center, 0.2, sphere_material));
                 }
             }
         }
     }
 
     const material1 = try mat_manager.create(Dielectric{ .refraction_index = 1.5 });
-    try world.add(.{ .sphere = &.init(&.{ 0, 1, 0 }, 1.0, material1) });
+    try world.add(&Sphere.init(&.{ 0, 1, 0 }, 1.0, material1));
 
     const material2 = try mat_manager.create(Lambertian{ .albedo = .{ 0.4, 0.2, 0.1 } });
-    try world.add(.{ .sphere = &.init(&.{ -4, 1, 0 }, 1.0, material2) });
+    try world.add(&Sphere.init(&.{ -4, 1, 0 }, 1.0, material2));
 
     const material3 = try mat_manager.create(Metal{ .albedo = .{ 0.7, 0.6, 0.5 }, .fuzz = 0.0 });
-    try world.add(.{ .sphere = &.init(&.{ 4, 1, 0 }, 1.0, material3) });
+    try world.add(&Sphere.init(&.{ 4, 1, 0 }, 1.0, material3));
 
     var cam = comptime Camera.init(.{
         .aspect_ratio = 16.0 / 9.0,
