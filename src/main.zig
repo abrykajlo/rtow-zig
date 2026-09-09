@@ -84,5 +84,5 @@ pub fn main(init: std.process.Init) !void {
 
     var buf: [128]u8 = undefined;
     var stdout_writer = std.Io.File.stdout().writer(init.io, &buf);
-    try cam.render(&stdout_writer.interface, .{ .hittable_list = &world });
+    try cam.render(init.io, &stdout_writer.interface, .{ .hittable_list = &world });
 }

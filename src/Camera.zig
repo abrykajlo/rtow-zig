@@ -78,7 +78,9 @@ pub fn init(in: Init) Camera {
     return cam;
 }
 
-pub fn render(self: *Camera, writer: *std.Io.Writer, world: Hittable) !void {
+pub fn render(self: *Camera, io: std.Io, writer: *std.Io.Writer, world: Hittable) !void {
+    const start = std.Io.Clock.awake.now(io);
+
     try writer.print("P3\n{} {}\n255\n", .{ self.image_width, self.image_height });
     for (0..self.image_height) |j| {
         std.log.info("\rScanlines remaining: {}", .{self.image_height - j});
@@ -89,10 +91,14 @@ pub fn render(self: *Camera, writer: *std.Io.Writer, world: Hittable) !void {
                 pixel_color += toVec3(self.pixels_samples_scale) * rayColor(&ray, self.max_depth, world);
             }
             try rtw.color.write(writer, &pixel_color);
+            try writer.flush();
         }
     }
 
-    std.log.info("\rDone.   \n", .{});
+    const end = std.Io.Clock.awake.now(io);
+    const duration = start.durationTo(end);
+
+    std.log.info("\rDone in {} seconds.   \n", .{duration.toSeconds()});
 }
 
 /// Construct a camera ray originating from the defocus disk and directed at a randomly sampled
