@@ -40,7 +40,7 @@ pub fn init(in: Init) Camera {
     cam.defocus_angle = in.defocus_angle;
     cam.focus_dist = in.focus_dist;
 
-    cam.image_height = rtw.toFloat(in.image_width) / in.aspect_ratio;
+    cam.image_height = @intFromFloat(rtw.toFloat(in.image_width) / in.aspect_ratio);
     cam.image_height = if (cam.image_height < 1) 1 else cam.image_height;
 
     cam.pixels_samples_scale = 1.0 / toFloat(cam.samples_per_pixel);
@@ -78,10 +78,8 @@ pub fn init(in: Init) Camera {
     return cam;
 }
 
-pub fn render(self: *Camera, world: Hittable) !void {
-    const outw = std.io.getStdOut().writer();
-
-    try outw.print("P3\n{} {}\n255\n", .{ self.image_width, self.image_height });
+pub fn render(self: *Camera, writer: *std.Io.Writer, world: Hittable) !void {
+    try writer.print("P3\n{} {}\n255\n", .{ self.image_width, self.image_height });
     for (0..self.image_height) |j| {
         std.log.info("\rScanlines remaining: {}", .{self.image_height - j});
         for (0..self.image_width) |i| {
@@ -90,7 +88,7 @@ pub fn render(self: *Camera, world: Hittable) !void {
                 const ray = self.getRay(i, j);
                 pixel_color += toVec3(self.pixels_samples_scale) * rayColor(&ray, self.max_depth, world);
             }
-            try rtw.color.write(&outw, &pixel_color);
+            try rtw.color.write(writer, &pixel_color);
         }
     }
 

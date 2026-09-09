@@ -1,6 +1,6 @@
 pub const Color = @Vector(3, f64);
 
-pub fn write(writer: *const std.fs.File.Writer, color: *const Color) !void {
+pub fn write(writer: *std.Io.Writer, color: *const Color) !void {
     var r = color[0];
     var g = color[1];
     var b = color[2];

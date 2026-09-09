@@ -1,37 +1,41 @@
 const HittableList = @This();
 
-allocator: Allocator,
-objects: std.ArrayList(Hittable),
+const std = @import("std");
+const Allocator = std.mem.Allocator;
+const ArrayList = std.ArrayList;
 
-pub fn init(allocator: Allocator) HittableList {
-    return .{
-        .allocator = allocator,
-        .objects = std.ArrayList(Hittable).init(allocator),
-    };
-}
+const rtw = @import("rtweekend.zig");
+const Interval = rtw.Interval;
+const Ray = rtw.Ray;
 
-pub fn deinit(self: *HittableList) void {
+const Hittable = @import("hittable.zig").Hittable;
+const HitRecord = @import("hittable.zig").HitRecord;
+const Sphere = @import("Sphere.zig");
+
+objects: ArrayList(Hittable) = .empty,
+
+pub fn deinit(self: *HittableList, allocator: Allocator) void {
     for (self.objects.items) |object| {
         switch (object) {
-            .sphere => |s| self.allocator.destroy(s),
+            .sphere => |s| allocator.destroy(s),
             .hittable_list => unreachable,
         }
     }
-    self.objects.deinit();
+    self.objects.deinit(allocator);
 }
 
 pub fn clear(self: *HittableList) void {
     self.objects.clearRetainingCapacity();
 }
 
-pub fn add(self: *HittableList, hittable: anytype) !void {
-    const ptr = try self.objects.addOne();
+pub fn add(self: *HittableList, allocator: Allocator, hittable: anytype) !void {
+    const ptr = try self.objects.addOne(allocator);
     const HittableT = @TypeOf(hittable);
     switch (@typeInfo(HittableT)) {
         .pointer => |p| {
             inline for (std.meta.fields(Hittable)) |field| {
                 if (field.type == HittableT) {
-                    const hittable_ptr = try self.allocator.create(p.child);
+                    const hittable_ptr = try allocator.create(p.child);
                     hittable_ptr.* = hittable.*;
                     ptr.* = @unionInit(Hittable, field.name, hittable_ptr);
                 }
@@ -56,14 +60,3 @@ pub fn hit(self: *const HittableList, ray: *const Ray, ray_t: Interval) ?HitReco
 
     return if (hit_anything) temp_rec else null;
 }
-
-const std = @import("std");
-const Allocator = std.mem.Allocator;
-
-const rtw = @import("rtweekend.zig");
-const Interval = rtw.Interval;
-const Ray = rtw.Ray;
-
-const Hittable = @import("hittable.zig").Hittable;
-const HitRecord = @import("hittable.zig").HitRecord;
-const Sphere = @import("Sphere.zig");
