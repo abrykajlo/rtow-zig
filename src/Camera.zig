@@ -1,5 +1,17 @@
 const Camera = @This();
 
+const std = @import("std");
+
+const Hittable = @import("hittable.zig").Hittable;
+
+const rtw = @import("rtweekend.zig");
+const Color = rtw.color.Color;
+const Ray = rtw.Ray;
+const toFloat = rtw.toFloat;
+const Point3 = rtw.vec3.Point3;
+const Vec3 = rtw.vec3.Vec3;
+const toVec3 = rtw.vec3.toVec3;
+
 aspect_ratio: f64, // Ratio of image width over height
 image_width: usize, // Rendered image width in pixel count
 image_height: usize, // Rendered image height
@@ -78,27 +90,42 @@ pub fn init(in: Init) Camera {
     return cam;
 }
 
-pub fn render(self: *Camera, io: std.Io, writer: *std.Io.Writer, world: Hittable) !void {
+pub fn render(self: *Camera, gpa: std.mem.Allocator, io: std.Io, writer: *std.Io.Writer, world: Hittable) !void {
     const start = std.Io.Clock.awake.now(io);
 
-    try writer.print("P3\n{} {}\n255\n", .{ self.image_width, self.image_height });
+    var pixels = try gpa.alloc(std.Io.Future(Color), self.image_height * self.image_width);
+    defer gpa.free(pixels);
+
+    // raytrace
     for (0..self.image_height) |j| {
         std.log.info("\rScanlines remaining: {}", .{self.image_height - j});
         for (0..self.image_width) |i| {
-            var pixel_color: Color = .{ 0, 0, 0 };
-            for (0..self.samples_per_pixel) |_| {
-                const ray = self.getRay(i, j);
-                pixel_color += toVec3(self.pixels_samples_scale) * rayColor(&ray, self.max_depth, world);
-            }
-            try rtw.color.write(writer, &pixel_color);
-            try writer.flush();
+            pixels[j * self.image_width + i] = io.async(renderPixel, .{ self.*, world, i, j });
         }
     }
+
+    // write to file
+    try writer.print("P3\n{} {}\n255\n", .{ self.image_width, self.image_height });
+    for (0..self.image_height) |j| {
+        for (0..self.image_width) |i| {
+            try rtw.color.write(writer, pixels[j * self.image_width + i].await(io));
+        }
+    }
+    try writer.flush();
 
     const end = std.Io.Clock.awake.now(io);
     const duration = start.durationTo(end);
 
     std.log.info("\rDone in {} seconds.   \n", .{duration.toSeconds()});
+}
+
+fn renderPixel(self: Camera, world: Hittable, i: usize, j: usize) Color {
+    var color: Color = .{ 0, 0, 0 };
+    for (0..self.samples_per_pixel) |_| {
+        const ray = self.getRay(i, j);
+        color += toVec3(self.pixels_samples_scale) * rayColor(&ray, self.max_depth, world);
+    }
+    return color;
 }
 
 /// Construct a camera ray originating from the defocus disk and directed at a randomly sampled
@@ -118,7 +145,7 @@ fn sampleSquare() @Vector(2, f64) {
     return .{ rtw.randomDouble(void{}) - 0.5, rtw.randomDouble(void{}) - 0.5 };
 }
 
-fn defocusDiskSample(self: *const Camera) Point3 {
+fn defocusDiskSample(self: Camera) Point3 {
     // Returns a random point in the camera defocus disk.
     const p = rtw.vec3.randomInUnitDisk();
     return self.center + toVec3(p[0]) * self.defocus_disk_u + toVec3(p[1]) * self.defocus_disk_v;
@@ -153,15 +180,3 @@ const Init = struct {
     defocus_angle: f64 = 0,
     focus_dist: f64 = 10,
 };
-
-const std = @import("std");
-
-const Hittable = @import("hittable.zig").Hittable;
-
-const rtw = @import("rtweekend.zig");
-const Color = rtw.color.Color;
-const Ray = rtw.Ray;
-const toFloat = rtw.toFloat;
-const Point3 = rtw.vec3.Point3;
-const Vec3 = rtw.vec3.Vec3;
-const toVec3 = rtw.vec3.toVec3;
