@@ -15,15 +15,15 @@ pub const Material = struct {
     vtable: *const VTable,
 
     const VTable = struct {
-        scatter: *const fn (*const anyopaque, r_in: *const Ray, rec: *const HitRecord, attenuation: *Color, scattered: *Ray) bool,
+        scatter: *const fn (*const anyopaque, r_in: Ray, rec: HitRecord, attenuation: *Color, scattered: *Ray) bool,
         destroy: *const fn (*const anyopaque, allocator: Allocator) void,
     };
 
-    pub inline fn scatter(self: *const Material, r_in: *const Ray, rec: *const HitRecord, attenuation: *Color, scattered: *Ray) bool {
+    pub inline fn scatter(self: Material, r_in: Ray, rec: HitRecord, attenuation: *Color, scattered: *Ray) bool {
         return self.vtable.scatter(self.ptr, r_in, rec, attenuation, scattered);
     }
 
-    pub inline fn destroy(self: *const Material, allocator: Allocator) void {
+    pub inline fn destroy(self: Material, allocator: Allocator) void {
         self.vtable.destroy(self.ptr, allocator);
     }
 };
@@ -31,12 +31,12 @@ pub const Material = struct {
 pub const Lambertian = struct {
     albedo: Color,
 
-    pub fn scatter(context: *const anyopaque, _: *const Ray, rec: *const HitRecord, attenuation: *Color, scattered: *Ray) bool {
+    pub fn scatter(context: *const anyopaque, _: Ray, rec: HitRecord, attenuation: *Color, scattered: *Ray) bool {
         const self: *const Lambertian = @ptrCast(@alignCast(context));
         var scatter_direction = rec.normal + rtw.vec3.randomUnitVector();
 
         // Catch degenerate scatter direction
-        if (rtw.vec3.nearZero(&scatter_direction))
+        if (rtw.vec3.nearZero(scatter_direction))
             scatter_direction = rec.normal;
 
         scattered.* = .{ .orig = rec.p, .dir = scatter_direction };
@@ -59,13 +59,13 @@ pub const Metal = struct {
     albedo: Color,
     fuzz: f64,
 
-    pub fn scatter(context: *const anyopaque, r_in: *const Ray, rec: *const HitRecord, attenuation: *Color, scattered: *Ray) bool {
+    pub fn scatter(context: *const anyopaque, r_in: Ray, rec: HitRecord, attenuation: *Color, scattered: *Ray) bool {
         const self: *const Metal = @ptrCast(@alignCast(context));
-        var reflected = rtw.vec3.reflect(&r_in.dir, &rec.normal);
-        reflected = rtw.vec3.unitVector(&reflected) + toVec3(self.fuzz) * rtw.vec3.randomUnitVector();
+        var reflected = rtw.vec3.reflect(r_in.dir, rec.normal);
+        reflected = rtw.vec3.unitVector(reflected) + toVec3(self.fuzz) * rtw.vec3.randomUnitVector();
         scattered.* = .{ .orig = rec.p, .dir = reflected };
         attenuation.* = self.albedo;
-        return rtw.vec3.dot(&scattered.dir, &rec.normal) > 0;
+        return rtw.vec3.dot(scattered.dir, rec.normal) > 0;
     }
 
     pub fn destroy(context: *const anyopaque, allocator: Allocator) void {
@@ -84,22 +84,22 @@ pub const Dielectric = struct {
     // the refractive index of the enclosing media
     refraction_index: f64,
 
-    pub fn scatter(context: *const anyopaque, r_in: *const Ray, rec: *const HitRecord, attenuation: *Color, scattered: *Ray) bool {
+    pub fn scatter(context: *const anyopaque, r_in: Ray, rec: HitRecord, attenuation: *Color, scattered: *Ray) bool {
         const self: *const Dielectric = @ptrCast(@alignCast(context));
         attenuation.* = .{ 1.0, 1.0, 1.0 };
         const ri = if (rec.front_face) 1.0 / self.refraction_index else self.refraction_index;
 
-        const unit_direction = rtw.vec3.unitVector(&r_in.dir);
-        const cos_theta = @min(rtw.vec3.dot(&-unit_direction, &rec.normal), 1.0);
+        const unit_direction = rtw.vec3.unitVector(r_in.dir);
+        const cos_theta = @min(rtw.vec3.dot(-unit_direction, rec.normal), 1.0);
         const sin_theta = @sqrt(1.0 - cos_theta * cos_theta);
 
         const cannot_refract = ri * sin_theta > 1.0;
         var direction: Vec3 = undefined;
 
         if (cannot_refract or reflectance(cos_theta, ri) > rtw.randomDouble(void{}))
-            direction = rtw.vec3.reflect(&unit_direction, &rec.normal)
+            direction = rtw.vec3.reflect(unit_direction, rec.normal)
         else
-            direction = rtw.vec3.refract(&unit_direction, &rec.normal, ri);
+            direction = rtw.vec3.refract(unit_direction, rec.normal, ri);
 
         scattered.* = .{ .orig = rec.p, .dir = direction };
         return true;

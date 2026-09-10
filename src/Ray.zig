@@ -1,7 +1,9 @@
+const Ray = @This();
+
 orig: Point3,
 dir: Vec3,
 
-pub fn at(self: *const @This(), t: f64) Point3 {
+pub fn at(self: Ray, t: f64) Point3 {
     return self.orig + toVec3(t) * self.dir;
 }
 

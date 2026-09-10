@@ -66,9 +66,9 @@ pub fn init(in: Init) Camera {
     const viewport_width = viewport_height * toFloat(cam.image_width) / toFloat(cam.image_height);
 
     // Calculate the u,v,w unit basis vectors for the camera coordinate frame.
-    cam.w = rtw.vec3.unitVector(&(in.lookfrom - in.lookat));
-    cam.u = rtw.vec3.unitVector(&rtw.vec3.cross(&cam.vup, &cam.w));
-    cam.v = rtw.vec3.cross(&cam.w, &cam.u);
+    cam.w = rtw.vec3.unitVector(in.lookfrom - in.lookat);
+    cam.u = rtw.vec3.unitVector(rtw.vec3.cross(cam.vup, cam.w));
+    cam.v = rtw.vec3.cross(cam.w, cam.u);
 
     // Calculate the vectors across the horizontal and down the vertical viewport edges.
     const viewport_u: Vec3 = toVec3(viewport_width) * cam.u; // Vector across viewport horizontal edge
@@ -123,14 +123,14 @@ fn renderPixel(self: Camera, world: Hittable, i: usize, j: usize) Color {
     var color: Color = .{ 0, 0, 0 };
     for (0..self.samples_per_pixel) |_| {
         const ray = self.getRay(i, j);
-        color += toVec3(self.pixels_samples_scale) * rayColor(&ray, self.max_depth, world);
+        color += toVec3(self.pixels_samples_scale) * rayColor(ray, self.max_depth, world);
     }
     return color;
 }
 
 /// Construct a camera ray originating from the defocus disk and directed at a randomly sampled
 /// point around the pixel location i, j
-fn getRay(self: *const Camera, i: usize, j: usize) Ray {
+fn getRay(self: Camera, i: usize, j: usize) Ray {
     const offset = sampleSquare();
     const pixel_sample = self.pixel00_loc + toVec3(toFloat(i) + offset[0]) * self.pixel_delta_u + toVec3(toFloat(j) + offset[1]) * self.pixel_delta_v;
 
@@ -151,19 +151,19 @@ fn defocusDiskSample(self: Camera) Point3 {
     return self.center + toVec3(p[0]) * self.defocus_disk_u + toVec3(p[1]) * self.defocus_disk_v;
 }
 
-fn rayColor(ray: *const Ray, depth: usize, world: Hittable) Color {
+fn rayColor(ray: Ray, depth: usize, world: Hittable) Color {
     if (depth <= 0)
         return .{ 0, 0, 0 };
 
     if (world.hit(ray, .{ .min = 0.001, .max = rtw.infinity })) |rec| {
         var scattered: Ray = undefined;
         var attenuation: Color = undefined;
-        if (rec.mat.scatter(ray, &rec, &attenuation, &scattered))
-            return attenuation * rayColor(&scattered, depth - 1, world);
+        if (rec.mat.scatter(ray, rec, &attenuation, &scattered))
+            return attenuation * rayColor(scattered, depth - 1, world);
         return .{ 0, 0, 0 };
     }
 
-    const unit_direction = rtw.vec3.unitVector(&ray.dir);
+    const unit_direction = rtw.vec3.unitVector(ray.dir);
     const a = 0.5 * (unit_direction[1] + 1.0);
     return toVec3(1.0 - a) * Color{ 1.0, 1.0, 1.0 } + toVec3(a) * Color{ 0.5, 0.7, 1.0 };
 }

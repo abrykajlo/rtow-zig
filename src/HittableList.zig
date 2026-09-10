@@ -8,11 +8,13 @@ const rtw = @import("rtweekend.zig");
 const Interval = rtw.Interval;
 const Ray = rtw.Ray;
 
+const AABB = @import("AABB.zig");
 const Hittable = @import("hittable.zig").Hittable;
 const HitRecord = @import("hittable.zig").HitRecord;
 const Sphere = @import("Sphere.zig");
 
 objects: ArrayList(Hittable) = .empty,
+bbox: AABB = .{},
 
 pub fn deinit(self: *HittableList, allocator: Allocator) void {
     for (self.objects.items) |object| {
@@ -45,7 +47,7 @@ pub fn add(self: *HittableList, allocator: Allocator, hittable: anytype) !void {
     }
 }
 
-pub fn hit(self: *const HittableList, ray: *const Ray, ray_t: Interval) ?HitRecord {
+pub fn hit(self: HittableList, ray: Ray, ray_t: Interval) ?HitRecord {
     var temp_rec: HitRecord = undefined;
     var hit_anything = false;
     var closest_so_far = ray_t.max;
