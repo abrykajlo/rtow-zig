@@ -12,6 +12,8 @@ const Point3 = rtw.vec3.Point3;
 const Vec3 = rtw.vec3.Vec3;
 const toVec3 = rtw.vec3.toVec3;
 
+const tracy = @import("tracy");
+
 aspect_ratio: f64, // Ratio of image width over height
 image_width: usize, // Rendered image width in pixel count
 image_height: usize, // Rendered image height
@@ -120,6 +122,9 @@ pub fn render(self: *Camera, gpa: std.mem.Allocator, io: std.Io, writer: *std.Io
 }
 
 fn renderPixel(self: Camera, world: Hittable, i: usize, j: usize) Color {
+    const zone = tracy.Zone.begin(.{ .src = @src(), .color = .alice_blue });
+    defer zone.end();
+
     var color: Color = .{ 0, 0, 0 };
     for (0..self.samples_per_pixel) |_| {
         const ray = self.getRay(i, j);

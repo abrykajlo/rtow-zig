@@ -20,8 +20,19 @@ const Ray = rtw.Ray;
 const Color = rtw.color.Color;
 const toFloat = rtw.toFloat;
 
+pub const tracy_impl = @import("tracy_impl");
+const tracy = @import("tracy");
+
 pub fn main(init: std.process.Init) !void {
-    const gpa = init.gpa;
+    const zone = tracy.Zone.begin(.{
+        .name = "main",
+        .src = @src(),
+        .color = .tomato,
+    });
+    defer zone.end();
+
+    var tracy_allocator: tracy.Allocator = .{ .parent = init.gpa };
+    const gpa = tracy_allocator.allocator();
 
     var world: HittableList = .{};
     defer world.deinit(gpa);
